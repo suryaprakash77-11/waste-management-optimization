@@ -1,0 +1,133 @@
+#define BLYNK_TEMPLATE_ID           "TMPL2OeXhA_I2"
+#define BLYNK_TEMPLATE_NAME         "Smart Waste Management System"
+#define BLYNK_AUTH_TOKEN            "JXuTLg6wGCIFoQpEoYzRzgWtFwD1LD9s"
+#define BLYNK_PRINT Serial
+#include <BlynkSimpleEsp32.h>
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <ESP32Servo.h>
+
+#define Second 1000
+#define Dry_Echo 18
+#define Dry_Trig 19
+#define Wet_Echo 22
+#define Wet_Trig 23
+#define SoilMoisture 33
+#define ServoMotor 21
+
+// functions
+void send_blynk();
+float calculate_distance(int Trig, int Echo, char can);
+bool is_full(int Trig, int Echo, char can);
+float calibrate(int moisture);
+
+// global variables
+char ssid[] = "Wokwi-GUEST";
+char pass[] = "";
+bool dry_full = 0;
+bool wet_full = 0;
+int servo_pos = 90;
+int max_moisture = 4095;
+int min_moisture = 1095;
+float threshold = calibrate(4000);
+BlynkTimer timer;
+Servo servo;
+
+void setup() {
+  Serial.begin(115200);
+  Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass);
+  pinMode(Dry_Trig, OUTPUT);
+  pinMode(Dry_Echo, INPUT);
+  pinMode(Wet_Trig, OUTPUT);
+  pinMode(Wet_Echo, INPUT);
+  pinMode(SoilMoisture, INPUT);
+  servo.attach(ServoMotor, 500, 2400);
+  timer.setInterval(1000, send_blynk);
+}
+
+void loop() {
+  Serial.println("______________________");
+
+  // manage trash
+  int moisture_value = analogRead(SoilMoisture);
+  float moisture = calibrate(moisture_value);
+  Serial.print("Moisture : ");
+  Serial.print(moisture_value);
+  Serial.print(" ----> calibrated : ");
+  Serial.print(moisture);
+  Serial.println("%");
+  bool wet_trash = moisture > threshold;
+  if(wet_trash){
+    Serial.print("The trash is wet! (threshold = ");
+    Serial.print(threshold);
+    Serial.println("%)");
+    // open gate
+    for (servo_pos = 90; servo_pos >= 0; servo_pos -= 1) {
+      servo.write(servo_pos);
+      delay(15);
+    }
+    delay(5 * Second);
+    // close gate
+    for (servo_pos = 0; servo_pos <= 90; servo_pos += 1) {
+      servo.write(servo_pos);
+      delay(15);
+    }
+  }
+
+  // manage can
+  dry_full = is_full(Dry_Trig, Dry_Echo, 'D');
+  wet_full = is_full(Wet_Trig, Wet_Echo, 'W');
+  if (dry_full){
+    Serial.println("The dry can is full.");
+  }
+  if (wet_full){
+    Serial.println("The wet can is full.");
+  }
+
+  Blynk.run();
+  timer.run();
+  delay(10 * Second);
+}
+
+void send_blynk(){
+  if (wet_full){
+    Blynk.logEvent("wet_can_is_full") ;
+    Blynk.virtualWrite(V1, 1);
+  }else{
+    Blynk.virtualWrite(V1, 0);
+  }
+  if (dry_full){
+    Blynk.logEvent("dry_can_is_full") ;
+    Blynk.virtualWrite(V0, 1);
+  }else{
+    Blynk.virtualWrite(V0, 0);
+  }
+}
+
+float calculate_distance(int Trig, int Echo, char can){
+  digitalWrite(Trig, LOW);
+  delay(2);
+  digitalWrite(Trig, HIGH);
+  delay(10);
+  digitalWrite(Trig, LOW);
+
+  int duration = pulseIn(Echo, HIGH);
+  float distance = duration * 0.034 /2;
+
+  Serial.print(can);
+  Serial.print(" free space : ");
+  Serial.print(distance);
+  Serial.println(" CM");
+  return distance;
+}
+
+bool is_full(int Trig, int Echo, char can){
+  float distance = calculate_distance(Trig, Echo, can);
+  return distance < 4;
+}
+
+float calibrate(int moisture){
+  int x = (max_moisture - min_moisture)/100;
+  return (max_moisture - moisture)/x;
+}
+

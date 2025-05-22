@@ -1,0 +1,260 @@
+DOCUMENT
+
+🔧 Project Title: IoT-Waste Management Optimization System using ESP32 and Blynk
+
+📍 1. Objective
+
+The IoT-Waste Management Optimization System is designed to automate the segregation, monitoring, and notification process in a smart waste disposal environment. This system differentiates between wet and dry waste using a soil moisture sensor, evaluates bin fill levels using ultrasonic sensors, and notifies authorities through a cloud-based interface powered by the Blynk IoT platform. This dataset document explains all sensor data sources, data flow, transformations, thresholds, and the dataset's final structure for analytics and decision-making.
+
+🧠 2. System Architecture Overview
+
+✨ Key Functional Modules:
+
+Trash Classification: Moisture sensor detects if the incoming waste is wet or dry.
+
+Servo Automation: Servo motor opens and closes the gate for wet trash bin.
+
+Bin Monitoring: Ultrasonic sensors monitor fill levels of dry and wet bins.
+
+Cloud Notification: Alerts are sent using the Blynk platform when bins are full.
+
+Data Logging: Sensor readings and states are logged for historical analysis.
+
+✅ Main Goals:
+
+Automate waste classification and sorting
+
+Optimize garbage collection schedules
+
+Prevent bin overflow
+
+Enable real-time and historical monitoring via cloud
+
+🚛 3. Hardware and Sensors
+
+Component
+
+Role
+
+Pin(s) Used
+
+Output Type
+
+Soil Moisture Sensor
+
+Detects moisture level to classify waste
+
+GPIO 33
+
+Analog (0–4095)
+
+Ultrasonic Sensor (Dry Bin)
+
+Measures fill level
+
+Trig: GPIO 19, Echo: GPIO 18
+
+Digital (pulse duration in µs)
+
+Ultrasonic Sensor (Wet Bin)
+
+Measures fill level
+
+Trig: GPIO 23, Echo: GPIO 22
+
+Digital (pulse duration in µs)
+
+Servo Motor
+
+Controls trash gate
+
+GPIO 21
+
+PWM (0–180°)
+
+ESP32 WiFi Module
+
+WiFi and Blynk communication
+
+N/A
+
+Digital/Cloud
+
+📊 4. Data Flow and Processing Logic
+
+4.1 Moisture Sensor (Wet/Dry Classification)
+
+Raw Value: Analog input (0–4095)
+
+Calibration:
+
+Calibrated Moisture (%) = (max_moisture - moisture_value) / ((max_moisture - min_moisture) / 100)
+
+Threshold: If calibrated value > threshold, classify as Wet Waste, else Dry Waste
+
+Action:
+
+If Wet Waste: Open Servo (0°), wait 5 seconds, then close (90°)
+
+4.2 Ultrasonic Sensors (Bin Fill Level)
+
+Raw Value: Pulse duration (in microseconds)
+
+Distance Calculation:
+
+Distance = duration * 0.034 / 2 (in cm)
+
+Threshold for Full Bin: If distance < 4 cm, bin is Full
+
+Blynk Output:
+
+Dry Bin: V0 = 1 (Full) or 0 (Not Full)
+
+Wet Bin: V1 = 1 (Full) or 0 (Not Full)
+
+🌐 5. Cloud Communication with Blynk
+
+Platform: Blynk IoT
+
+Auth Token: Used to authenticate device
+
+Virtual Pins:
+
+V0: Dry Bin Status (1 = Full, 0 = Not Full)
+
+V1: Wet Bin Status (1 = Full, 0 = Not Full)
+
+Log Events:
+
+dry_can_is_full
+
+wet_can_is_full
+
+📃 6. Dataset Structure
+
+6.1 Recorded Parameters (Per 10 seconds):
+
+Timestamp
+
+Moisture Value
+
+Moisture (%)
+
+Waste Type
+
+Dry Bin Distance (cm)
+
+Dry Bin Full
+
+Wet Bin Distance (cm)
+
+Wet Bin Full
+
+12:01:00
+
+3050
+
+30%
+
+Dry
+
+12.5
+
+No
+
+3.5
+
+Yes
+
+12:01:10
+
+1700
+
+75%
+
+Wet
+
+10.2
+
+No
+
+3.8
+
+Yes
+
+6.2 Blynk Cloud Data:
+
+Time
+
+Virtual Pin
+
+Value
+
+Event Log
+
+12:01
+
+V0
+
+0
+
+-
+
+12:01
+
+V1
+
+1
+
+wet_can_is_full
+
+⚖️ 7. Calibration Parameters
+
+Parameter
+
+Value
+
+max_moisture
+
+4095
+
+min_moisture
+
+1095
+
+threshold (calculated from 4000)
+
+~2% Moisture
+
+full_bin_distance
+
+< 4 cm
+
+🧹 8. Applications
+
+Municipal waste monitoring
+
+Smart city automation systems
+
+Institutional waste sorting (universities, malls)
+
+Industrial bin tracking
+
+Data-driven decision-making for route optimization
+
+🚀 9. Future Enhancements
+
+Add GSM/SMS backup for offline alerts
+
+Use machine learning to predict bin fill rates
+
+Integrate with Google Sheets for exportable logs
+
+Solar-powered ESP32 for sustainability
+
+Automatic waste compression module
+
+📖 10. Summary
+
+This dataset framework provides structured, time-stamped, sensor-derived insights for wet/dry waste classification, bin occupancy detection, and cloud-based alerting. It ensures efficient management of waste disposal systems and forms the backbone of a scalable and intelligent waste monitoring ecosystem.
+
